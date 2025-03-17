@@ -1,50 +1,36 @@
-import {
-  SmartContract,
-  useAddress,
-  useContract,
-  Web3Button,
-} from "@thirdweb-dev/react";
-import { BaseContract } from "ethers";
+import { useEffect, useState } from "react";
 import type { NextPage } from "next";
-import { MAYC_ADDRESS, SERUM_ADDRESS } from "../const/contractAddresses";
+import dynamic from "next/dynamic";
 import styles from "../styles/Theme.module.css";
 
+// Import Navigation component normally since it doesn't use ThirdwebProvider hooks directly
+import Navigation from "../components/Navigation";
+
+// Create a dynamic import for the MutantMinter with client-side only rendering
+const MutantMinter = dynamic(
+  () => import("../components/MutantMinter"),
+  { ssr: false }
+);
+
 const Home: NextPage = () => {
-  const address = useAddress();
+  const [isMounted, setIsMounted] = useState(false);
 
-  const { contract: serumContract } = useContract(SERUM_ADDRESS);
-
-  const mintMutantNft = async (maycContract: SmartContract<BaseContract>) => {
-    // 1. Check the approval of the mayc contract to burn the user's serum tokens
-    const hasApproval = await serumContract?.call("isApprovedForAll", [
-      address,
-      maycContract?.getAddress(),
-    ]);
-    const balance = await serumContract?.call("balanceOf", [address, 0]);
-
-    if (!hasApproval) {
-      // Set approval
-      await serumContract?.call("setApprovalForAll", [
-        maycContract?.getAddress(),
-        true,
-      ]);
-    }
-
-    if (balance < 1) {
-      return alert("Not enough serum tokens");
-    }
-
-    await maycContract?.call("claim", [address, 1]);
-  };
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
-    <div className={styles.container} style={{ marginTop: "3rem" }}>
-      <Web3Button
-        contractAddress={MAYC_ADDRESS}
-        action={(contract) => mintMutantNft(contract)}
-      >
-        Mint Your Mutant NFT
-      </Web3Button>
+    <div className={styles.pageContainer}>
+      <Navigation />
+      <main className={styles.container}>
+        <h1 className={styles.title}>Mutant NFT Minter</h1>
+        <p className={styles.description}>
+          Burn your 1155 Serum Token to mint a new 721 Mutant NFT
+        </p>
+        <div className={styles.minterContainer}>
+          {isMounted ? <MutantMinter /> : <div>Loading...</div>}
+        </div>
+      </main>
     </div>
   );
 };
